@@ -246,7 +246,7 @@
             }
           } catch (e) {
             if (!rows.value.length) error.value = e.message;
-            cacheStatus.value = 'offline';
+            cacheStatus.value = rows.value.length ? 'fetch failed (cached)' : 'fetch failed';
           }
         };
 
