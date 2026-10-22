@@ -88,3 +88,4 @@ stocks-cert/
 - 2026-10-22: Dark mode fixed with CSS fallback + sun/moon glyph toggle.
 - 2026-10-22: Dark mode background fix (!important on body).
 - 2026-10-22: Fixed tailwind.config (not nested) for darkMode class strategy.
+- 2026-10-22: Dark mode reimplemented with pure CSS .dark class (dropped Tailwind dark: variants).
