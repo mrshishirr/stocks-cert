@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stocks Cert — Halal Stock Screener</title>
   <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { darkMode: 'class' };
+    tailwind = { config: { darkMode: 'class' } };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    html.dark body { background-color: #111827; color: #f3f4f6; }
+    html.dark .bg-white { background-color: #1f2937 !important; }
+    html.dark .bg-gray-50 { background-color: #111827 !important; }
+    html.dark .bg-gray-100 { background-color: #374151 !important; }
+    html.dark .text-gray-900 { color: #f3f4f6 !important; }
+    html.dark .text-gray-600, html.dark .text-gray-500, html.dark .text-gray-400 { color: #9ca3af !important; }
+    html.dark .border { border-color: #374151 !important; }
+    html.dark input, html.dark select { background-color: #374151 !important; color: #f3f4f6 !important; border-color: #4b5563 !important; }
+    html.dark .hover\\:bg-blue-50:hover { background-color: #1e3a8a !important; }
+    html.dark .hover\\:bg-gray-100:hover { background-color: #374151 !important; }
+  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
   <div id="app" class="max-w-7xl mx-auto p-4">
@@ -22,8 +33,8 @@
           <span v-if="cacheStatus" class="ml-2 text-xs">({{ cacheStatus }})</span>
         </p>
       </div>
-      <button @click="toggleDark" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:border-gray-600">
-        {{ dark ? 'Light' : 'Dark' }} mode
+      <button @click="toggleDark" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:border-gray-600" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
+        {{ dark ? '☀' : '☾' }}
       </button>
     </header>
 
