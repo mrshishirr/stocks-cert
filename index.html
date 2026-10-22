@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stocks Cert — Halal Stock Screener</title>
   <script>
-    tailwind.config = { darkMode: 'class' };
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { darkMode: 'class' };
   </script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
   <div id="app" class="max-w-7xl mx-auto p-4">
@@ -21,33 +22,29 @@
           <span v-if="cacheStatus" class="ml-2 text-xs">({{ cacheStatus }})</span>
         </p>
       </div>
-      <button @click="toggleDark" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+      <button @click="toggleDark" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:border-gray-600">
         {{ dark ? 'Light' : 'Dark' }} mode
       </button>
     </header>
 
     <section class="bg-white dark:bg-gray-800 rounded shadow p-4 mb-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <input v-model="search" placeholder="Search ticker or name…" class="border rounded px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600" />
-        <select v-model="sortKey" class="border rounded px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">
-          <option value="halal">Halal desirability</option>
-          <option value="mcap">Market cap desc</option>
-          <option value="iri">IRI score desc</option>
-          <option value="name">Name asc</option>
-        </select>
         <div class="flex flex-wrap gap-2 items-center text-sm">
+          <span class="text-gray-500 dark:text-gray-400">Sharia:</span>
           <label v-for="s in shariaOptions" :key="s" class="flex items-center gap-1">
             <input type="checkbox" :value="s" v-model="shariaFilter" /> {{ s }}
           </label>
         </div>
         <div class="flex flex-wrap gap-2 items-center text-sm">
+          <span class="text-gray-500 dark:text-gray-400">Exch:</span>
           <label v-for="e in exchangeOptions" :key="e" class="flex items-center gap-1">
             <input type="checkbox" :value="e" v-model="exchangeFilter" /> {{ e }}
           </label>
         </div>
       </div>
       <div class="mt-3 flex items-center gap-3 text-sm">
-        <button @click="resetFilters" class="px-3 py-1 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">Reset</button>
+        <button @click="resetFilters" class="px-3 py-1 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">Reset</button>
         <span class="text-gray-500 dark:text-gray-400">{{ filtered.length }} matching · page {{ page }} of {{ totalPages }}</span>
         <button @click="exportCsv" class="ml-auto px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Export CSV</button>
       </div>
@@ -60,16 +57,11 @@
         <table class="min-w-full text-sm">
           <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
             <tr>
-              <th class="p-2 border text-left">Ticker</th>
-              <th class="p-2 border text-left">Name</th>
-              <th class="p-2 border">Exch</th>
-              <th class="p-2 border">Sharia</th>
-              <th class="p-2 border">Halal Rating</th>
-              <th class="p-2 border">IRI</th>
-              <th class="p-2 border text-right">MktCap $B</th>
-              <th class="p-2 border text-right">Biz %</th>
-              <th class="p-2 border text-right">Doubt %</th>
-              <th class="p-2 border text-right">Debt %</th>
+              <th v-for="col in columns" :key="col.key" class="p-2 border text-left cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                  @click="sortBy(col.key)">
+                {{ col.label }}
+                <span v-if="sortCol===col.key">{{ sortDir==='asc' ? '▲' : '▼' }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -94,11 +86,11 @@
       </div>
 
       <div class="flex items-center justify-center gap-2 mt-4">
-        <button @click="page=1" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40">«</button>
-        <button @click="page--" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
+        <button @click="page=1" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">«</button>
+        <button @click="page--" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">Prev</button>
         <span class="text-sm">Page {{ page }} / {{ totalPages }}</span>
-        <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40">Next</button>
-        <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40">»</button>
+        <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">Next</button>
+        <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">»</button>
       </div>
     </template>
 
@@ -135,6 +127,23 @@
     const RATING_ORDER = { COMPLIANT: 0, QUESTIONABLE: 1, NON_COMPLIANT: 2 };
     const CACHE_KEY = 'stocks-cert:data';
     const DATE_KEY = 'stocks-cert:fetchDate';
+    const COLUMNS = [
+      { key: 'ticker', label: 'Ticker' },
+      { key: 'name', label: 'Name' },
+      { key: 'exchange', label: 'Exch' },
+      { key: 'sharia_compliance', label: 'Sharia' },
+      { key: 'musaffaHalalRating', label: 'Halal Rating' },
+      { key: 'musaffa_iri_score', label: 'IRI' },
+      { key: 'usdMarketCap', label: 'MktCap $B' },
+      { key: 'businessCompliantRatio', label: 'Biz %' },
+      { key: 'doubtful_revenue_percent', label: 'Doubt %' },
+      { key: 'interestBearingDebtRatio', label: 'Debt %' },
+    ];
+
+    const getVal = (r, key) => {
+      if (key === 'usdMarketCap') return (r.usdMarketCap || 0) / 1000;
+      return r[key];
+    };
 
     createApp({
       setup() {
@@ -142,7 +151,6 @@
         const loading = ref(true);
         const error = ref(null);
         const search = ref('');
-        const sortKey = ref('halal');
         const shariaFilter = ref(['COMPLIANT','NON_COMPLIANT','QUESTIONABLE']);
         const exchangeFilter = ref(['NYSE','NASDAQ','XASE','BATS','ARCX']);
         const shariaOptions = ['COMPLIANT','NON_COMPLIANT','QUESTIONABLE'];
@@ -153,11 +161,12 @@
         const lastUpdated = ref(null);
         const cacheStatus = ref('');
         const dark = ref(localStorage.getItem('stocks-cert:dark') === '1');
+        const sortCol = ref('usdMarketCap');
+        const sortDir = ref('desc');
 
-        // apply dark class
-        const applyDark = () => {
-          document.documentElement.classList.toggle('dark', dark.value);
-        };
+        const columns = COLUMNS;
+
+        const applyDark = () => { document.documentElement.classList.toggle('dark', dark.value); };
         applyDark();
         const toggleDark = () => {
           dark.value = !dark.value;
@@ -184,7 +193,6 @@
           lastUpdated.value = data.fetched_at || null;
         };
 
-        // Load cached first
         const loadCache = async () => {
           try {
             if (!('caches' in window)) return false;
@@ -229,7 +237,6 @@
         onMounted(async () => {
           await loadCache();
           loading.value = false;
-          // background refresh (once per day)
           backgroundFetch();
         });
 
@@ -246,35 +253,45 @@
           });
         });
 
+        const cmp = (a, b) => {
+          // numeric compare with null handling
+          const an = a == null, bn = b == null;
+          if (an && bn) return 0;
+          if (an) return 1;
+          if (bn) return -1;
+          if (typeof a === 'number' && typeof b === 'number') return a - b;
+          return String(a).localeCompare(String(b));
+        };
+
         const sorted = computed(() => {
           const arr = [...filtered.value];
-          if (sortKey.value === 'mcap') {
-            arr.sort((a,b) => (b.usdMarketCap||0) - (a.usdMarketCap||0));
-          } else if (sortKey.value === 'iri') {
-            arr.sort((a,b) => (b.musaffa_iri_score||-1) - (a.musaffa_iri_score||-1));
-          } else if (sortKey.value === 'name') {
-            arr.sort((a,b) => (a.name||'').localeCompare(b.name||''));
-          } else {
-            arr.sort((a,b) => {
-              const ra = RATING_ORDER[a.musaffaHalalRating] ?? 3;
-              const rb = RATING_ORDER[b.musaffaHalalRating] ?? 3;
-              if (ra !== rb) return ra - rb;
-              const ia = a.musaffa_iri_score ?? -1;
-              const ib = b.musaffa_iri_score ?? -1;
-              if (ib !== ia) return ib - ia;
-              const ba = a.businessCompliantRatio ?? -1;
-              const bb = b.businessCompliantRatio ?? -1;
-              if (bb !== ba) return bb - ba;
-              const da = a.doubtful_revenue_percent ?? 999;
-              const db = b.doubtful_revenue_percent ?? 999;
-              if (da !== db) return da - db;
-              const ea = a.interestBearingDebtRatio ?? 999;
-              const eb = b.interestBearingDebtRatio ?? 999;
-              return ea - eb;
-            });
-          }
+          const key = sortCol.value;
+          const dir = sortDir.value === 'asc' ? 1 : -1;
+          arr.sort((a, b) => {
+            const va = getVal(a, key);
+            const vb = getVal(b, key);
+            // special halal rating order
+            if (key === 'musaffaHalalRating') {
+              const ra = RATING_ORDER[va] ?? 3;
+              const rb = RATING_ORDER[vb] ?? 3;
+              return dir * (ra - rb);
+            }
+            return dir * cmp(va, vb);
+          });
           return arr;
         });
+
+        const sortBy = (key) => {
+          if (sortCol.value === key) {
+            sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+          } else {
+            sortCol.value = key;
+            // default direction: desc for numeric, asc for text
+            const numeric = ['musaffa_iri_score','usdMarketCap','businessCompliantRatio','doubtful_revenue_percent','interestBearingDebtRatio'].includes(key);
+            sortDir.value = numeric ? 'desc' : 'asc';
+          }
+          page.value = 1;
+        };
 
         const totalPages = computed(() => Math.max(1, Math.ceil(sorted.value.length / pageSize)));
         const pageRows = computed(() => {
@@ -283,13 +300,14 @@
           return sorted.value.slice(start, start+pageSize);
         });
 
-        watch([search, sortKey, shariaFilter, exchangeFilter], () => { page.value = 1; });
+        watch([search, shariaFilter, exchangeFilter], () => { page.value = 1; });
 
         const resetFilters = () => {
           search.value = '';
-          sortKey.value = 'halal';
           shariaFilter.value = [...shariaOptions];
           exchangeFilter.value = [...exchangeOptions];
+          sortCol.value = 'usdMarketCap';
+          sortDir.value = 'desc';
           page.value = 1;
         };
         const openDetail = (r) => { detail.value = r; };
@@ -311,10 +329,11 @@
         };
 
         const total = computed(() => rows.value.length);
-        return { rows, loading, error, search, sortKey, shariaFilter, exchangeFilter,
+        return { rows, loading, error, search, shariaFilter, exchangeFilter,
                  shariaOptions, exchangeOptions, page, pageSize, totalPages, pageRows,
                  filtered, sorted, total, detail, lastUpdated, cacheStatus, dark,
-                 fmt, shariaClass, ratingClass, resetFilters, openDetail, exportCsv, toggleDark };
+                 sortCol, sortDir, columns, fmt, shariaClass, ratingClass,
+                 resetFilters, openDetail, exportCsv, toggleDark, sortBy };
       }
     }).mount('#app');
   </script>
