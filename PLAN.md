@@ -84,3 +84,4 @@ stocks-cert/
 - 2026-10-22: Plan created.
 - 2026-10-22: Seeded data/stocks.json (6592 hits). Phase 2 core + detail view + CSV export implemented in index.html. Chose Option A for data. Decided Vue 3 CDN + Tailwind. Identified key-refresh requirement.
 - 2026-10-22: Fixed stray EOF text; added last-updated display, browser cache + once/day background refresh, light/dark mode toggle.
+- 2026-10-22: Fixed dark mode (config before CDN); made all column headers sortable with toggle; default sort market cap desc.
