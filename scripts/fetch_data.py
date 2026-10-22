@@ -279,12 +279,17 @@ def main():
     resolved_count = sum(1 for h in deduped if h["document"].get("ticker") != "???")
     print(f"  resolved/unresolved tickers: {resolved_count}/{len(deduped)-resolved_count}")
 
+    fetched_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump({"fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        json.dump({"fetched_at": fetched_at,
                    "source": base, "found": total, "count": len(deduped),
                    "unmatched": unmatched,
                    "hits": deduped}, f)
+    version_file = os.path.join(os.path.dirname(OUT), "version.txt")
+    with open(version_file, "w") as f:
+        f.write(fetched_at)
+    print(f"Wrote version -> {version_file}")
     print(f"Wrote {len(deduped)} hits to {OUT}")
 
 

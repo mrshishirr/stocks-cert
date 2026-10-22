@@ -170,7 +170,6 @@
   <script>
     const { createApp, ref, computed, onMounted, watch } = Vue;
     const RATING_ORDER = { COMPLIANT: 0, QUESTIONABLE: 1, NON_COMPLIANT: 2 };
-    const DATE_KEY = 'stocks-cert:fetchDate';
     const COLUMNS = [
       { key: 'ticker', label: 'Ticker' },
       { key: 'name', label: 'Name' },
@@ -245,7 +244,7 @@
         const loadCache = async () => {
           try {
             if (!('caches' in window)) return false;
-            const cache = await caches.open('stocks-cert');
+            const cache = await caches.open('stocks-cert-v2');
             const resp = await cache.match('data/stocks.json');
             if (resp) {
               const data = await resp.json();
@@ -257,30 +256,14 @@
           return false;
         };
 
-        const today = () => new Date().toISOString().slice(0,10);
+        const VERSION_KEY = 'stocks-cert:version';
 
-        const backgroundFetch = async () => {
-          const last = localStorage.getItem(DATE_KEY);
-          if (last === today()) {
-            cacheStatus.value = cacheStatus.value || 'up to date';
-            return;
-          }
+        const fetchVersion = async () => {
           try {
-            const res = await fetch('data/stocks.json', { cache: 'no-store' });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const clone = res.clone();
-            const data = await res.json();
-            setRows(data);
-            cacheStatus.value = 'updated';
-            localStorage.setItem(DATE_KEY, today());
-            if ('caches' in window) {
-              const cache = await caches.open('stocks-cert');
-              await cache.put('data/stocks.json', clone);
-            }
-          } catch (e) {
-            if (!rows.value.length) error.value = e.message;
-            cacheStatus.value = rows.value.length ? 'fetch failed (cached)' : 'fetch failed';
-          }
+            const res = await fetch('data/version.txt', { cache: 'no-store' });
+            if (!res.ok) return null;
+            return (await res.text()).trim();
+          } catch (e) { return null; }
         };
 
         const forceFetch = async () => {
@@ -293,9 +276,10 @@
             const data = await res.json();
             setRows(data);
             cacheStatus.value = 'updated';
-            localStorage.setItem(DATE_KEY, today());
+            const v = data.fetched_at || (await fetchVersion());
+            if (v) localStorage.setItem(VERSION_KEY, v);
             if ('caches' in window) {
-              const cache = await caches.open('stocks-cert');
+              const cache = await caches.open('stocks-cert-v2');
               await cache.put('data/stocks.json', clone);
             }
           } catch (e) {
@@ -309,7 +293,19 @@
         onMounted(async () => {
           await loadCache();
           loading.value = false;
-          backgroundFetch();
+          // version-based refresh: fetch full data only if version changed
+          const cachedVersion = localStorage.getItem(VERSION_KEY);
+          const liveVersion = await fetchVersion();
+          if (!liveVersion) {
+            // offline or no version file; keep cached
+            cacheStatus.value = cacheStatus.value || 'offline';
+            return;
+          }
+          if (liveVersion !== cachedVersion || !rows.value.length) {
+            forceFetch();
+          } else {
+            cacheStatus.value = cacheStatus.value || 'up to date';
+          }
         });
 
         const filtered = computed(() => {
