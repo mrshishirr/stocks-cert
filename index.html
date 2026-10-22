@@ -60,7 +60,9 @@
       </div>
       <div class="mt-3 flex items-center gap-3 text-sm">
         <button @click="resetFilters" class="px-3 py-1 border bordered rounded">Reset</button>
+        <button @click="clearSort" class="px-3 py-1 border bordered rounded">Clear sort</button>
         <span class="muted">{{ filtered.length }} matching · page {{ page }} of {{ totalPages }}</span>
+        <span class="text-xs muted">Click header to add/toggle/remove sort (priority 1,2,…)</span>
         <button @click="exportCsv" class="ml-auto px-3 py-1 bg-blue-800 text-white rounded hover:bg-blue-900">Export CSV</button>
       </div>
     </section>
@@ -74,10 +76,12 @@
             <table class="min-w-full text-sm">
               <thead class="thead sticky top-0">
                 <tr>
-                  <th v-for="col in columns" :key="col.key" class="p-2 border bordered text-left cursor-pointer select-none" @click="sortBy(col.key)">
-                    {{ col.label }}
-                    <span v-if="sortCol===col.key">{{ sortDir==='asc' ? '▲' : '▼' }}</span>
-                  </th>
+              <th v-for="col in columns" :key="col.key" class="p-2 border bordered text-left cursor-pointer select-none" @click="sortBy(col.key)">
+                {{ col.label }}
+                <span v-if="sortIndex(col.key)" class="ml-1 text-xs text-blue-600 font-bold">
+                  {{ sortDirOf(col.key)==='asc' ? '▲' : '▼' }}{{ sortIndex(col.key) }}
+                </span>
+              </th>
                 </tr>
               </thead>
               <tbody>
@@ -184,8 +188,7 @@
         const lastUpdated = ref(null);
         const cacheStatus = ref('');
         const dark = ref(localStorage.getItem('stocks-cert:dark') !== '0');
-        const sortCol = ref('usdMarketCap');
-        const sortDir = ref('desc');
+        const sorts = ref([{ key: 'usdMarketCap', dir: 'desc' }]);
 
         const columns = COLUMNS;
 
@@ -279,31 +282,62 @@
           return String(a).localeCompare(String(b));
         };
 
+        const sortIndex = (key) => {
+          const i = sorts.value.findIndex(s => s.key === key);
+          return i === -1 ? 0 : i + 1;
+        };
+        const sortDirOf = (key) => {
+          const s = sorts.value.find(x => x.key === key);
+          return s ? s.dir : '';
+        };
+
         const sorted = computed(() => {
           const arr = [...filtered.value];
-          const key = sortCol.value;
-          const dir = sortDir.value === 'asc' ? 1 : -1;
+          const active = sorts.value.length ? sorts.value : [{ key: 'usdMarketCap', dir: 'desc' }];
           arr.sort((a, b) => {
-            const va = getVal(a, key);
-            const vb = getVal(b, key);
-            if (key === 'musaffaHalalRating') {
-              const ra = RATING_ORDER[va] ?? 3;
-              const rb = RATING_ORDER[vb] ?? 3;
-              return dir * (ra - rb);
+            for (const s of active) {
+              const key = s.key;
+              const dir = s.dir === 'asc' ? 1 : -1;
+              const va = getVal(a, key);
+              const vb = getVal(b, key);
+              let r;
+              if (key === 'musaffaHalalRating') {
+                const ra = RATING_ORDER[va] ?? 3;
+                const rb = RATING_ORDER[vb] ?? 3;
+                r = ra - rb;
+              } else {
+                r = cmp(va, vb);
+              }
+              if (r !== 0) return dir * r;
             }
-            return dir * cmp(va, vb);
+            return 0;
           });
           return arr;
         });
 
         const sortBy = (key) => {
-          if (sortCol.value === key) {
-            sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-          } else {
-            sortCol.value = key;
+          const idx = sorts.value.findIndex(s => s.key === key);
+          if (idx === -1) {
             const numeric = ['musaffa_iri_score','usdMarketCap','businessCompliantRatio','doubtful_revenue_percent','interestBearingDebtRatio'].includes(key);
-            sortDir.value = numeric ? 'desc' : 'asc';
+            sorts.value = [...sorts.value, { key, dir: numeric ? 'desc' : 'asc' }];
+          } else {
+            const cur = sorts.value[idx];
+            if (cur.dir === 'asc') {
+              // asc -> desc
+              const next = [...sorts.value];
+              next[idx] = { key, dir: 'desc' };
+              sorts.value = next;
+            } else {
+              // desc -> remove
+              sorts.value = sorts.value.filter(s => s.key !== key);
+              if (sorts.value.length === 0) sorts.value = [{ key: 'usdMarketCap', dir: 'desc' }];
+            }
           }
+          page.value = 1;
+        };
+
+        const clearSort = () => {
+          sorts.value = [{ key: 'usdMarketCap', dir: 'desc' }];
           page.value = 1;
         };
 
@@ -320,8 +354,7 @@
           search.value = '';
           shariaFilter.value = [...shariaOptions];
           exchangeFilter.value = [...exchangeOptions];
-          sortCol.value = 'usdMarketCap';
-          sortDir.value = 'desc';
+          sorts.value = [{ key: 'usdMarketCap', dir: 'desc' }];
           page.value = 1;
         };
         const openDetail = (r) => {
@@ -352,8 +385,8 @@
         return { rows, loading, error, search, shariaFilter, exchangeFilter,
                  shariaOptions, exchangeOptions, page, pageSize, totalPages, pageRows,
                  filtered, sorted, total, detail, lastUpdated, cacheStatus, dark,
-                 sortCol, sortDir, columns, fmt, shariaClass, ratingClass,
-                 resetFilters, openDetail, exportCsv, toggleDark, sortBy };
+                 sorts, sortIndex, sortDirOf, columns, fmt, shariaClass, ratingClass,
+                 resetFilters, openDetail, exportCsv, toggleDark, sortBy, clearSort };
       }
     }).mount('#app');
   </script>
