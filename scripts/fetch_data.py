@@ -1,21 +1,159 @@
-"""Fetch stock data from Typesense into data/stocks.json (Option A)."""
-import json, os, sys, time, urllib.request, urllib.parse
+"""Fetch stock data from Typesense into data/stocks.json (Option A).
+
+Post-fetch resolver uses SEC company_tickers.json to resolve foreign (dotted)
+home-market tickers to their US tickers. SEC snapshot is stored in-repo
+(data/sec_tickers.json) and only re-downloaded on force-refresh.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+import time
+import urllib.request
+import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config.json")
 OUT = os.path.join(ROOT, "data", "stocks.json")
+SEC_OUT = os.path.join(ROOT, "data", "sec_tickers.json")
 
 
 def norm_name(n):
     return " ".join(str(n or "").lower().split())
 
 
-def resolve_tickers(hits):
-    """Post-fetch hook: resolve ADR/foreign stocks to home-market tickers.
+def norm_title(s):
+    s = str(s or "").lower()
+    s = re.sub(r"[^a-z0-9 ]", " ", s)
+    for w in ["inc", "corp", "corporation", "ltd", "limited", "plc", "sa", "ag", "nv",
+              "co", "company", "group", "holdings", "holding", "llc", "the"]:
+        s = re.sub(r"\b" + w + r"\b", " ", s)
+    return " ".join(s.split())
+
+
+# Manual overrides: dotted foreign ticker -> US ticker (verified against SEC)
+MANUAL_OVERRIDES = {
+    "BATS.L": "BTI",
+    "DBK.DE": "DB",
+    "NOKIA.HE": "NOK",
+    "STMPA.PA": "STM",
+    "STLAM.MI": "STLA",
+    "TEF.MC": "TEF",
+    "VIVT3.SA": "VIV",
+    "VALE3.SA": "VALE",
+    "ITUB4.SA": "ITUB",
+    "ABEV3.SA": "ABEV",
+    "SANB3.SA": "BSBR",
+    "CSAN3.SA": "CSANY",
+    "CSNA3.SA": "SID",
+    "UGPA3.SA": "UGP",
+    "SUZB3.SA": "SUZ",
+    "TIMS3.SA": "TIMB",
+    "ECOPETROL.BC": "EC",
+    "ELD.TO": "EGO",
+    "TCELL.E.IS": "TKC",
+    "DRREDDY.NS": "RDY",
+    "DBV.PA": "DBVT",
+    "GRUPOAVAL.BC": "AVAL",
+    "ERIC B.ST": "ERIC",
+    "ENELCHILE.SN": "ENIC",
+    "BCOLOMBIA.BC": "CIB",
+    "TLEVISACPO.MX": "TV",
+    "TLKM.JK": "TLK",
+    "VISTAA.MX": "VIST",
+    "VOLARA.MX": "VLRS",
+    "GGBR4.SA": "GGB",
+    "YPFD2.BA": "YPF",
+    "BBU.UN.TO": "BBU",
+    "CPLE6.SA": "ELP",
+    "ALCLS.PA": "CLLS",
+    "ASURB.MX": "ASR",
+    "AXIA6.SA": "AXIA",
+    "FEMSAUBD.MX": "FMX",
+    "GAPB.MX": "PAC",
+    "PHARM.AS": "PHAR",
+    "QIPT.TO": "QIPT",
+    "SIMECB.MX": "SIMEC",
+    "SQM-A.SN": "SQM",
+    "TGSU22.BA": "TGS",
+    "VESTA.MX": "VTMX",
+    "AXIA6.SA": "AXICY",
+    "NOKIA.HE": "NOK",
+    "BATS.L": "BTI",
+}
+
+
+def strip_trailing_digits(s):
+    return re.sub(r"\d+$", "", s)
+
+
+def load_sec(cfg, force=False):
+    """Load SEC snapshot from disk; download if missing or force."""
+    if os.path.exists(SEC_OUT) and not force:
+        with open(SEC_OUT) as f:
+            return json.load(f)
+    url = cfg.get("secUrl", "https://www.sec.gov/files/company_tickers.json")
+    headers = {
+        "User-Agent": cfg.get("secUserAgent", "stocks-cert research (contact: mrshishirr@gmail.com)"),
+        "Accept": "application/json",
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        data = json.load(resp)
+    os.makedirs(os.path.dirname(SEC_OUT), exist_ok=True)
+    with open(SEC_OUT, "w") as f:
+        json.dump(data, f)
+    print(f"Downloaded SEC tickers -> {SEC_OUT} ({len(data)} entries)")
+    return data
+
+
+def resolve_tickers(hits, sec_data):
+    """Post-fetch hook: resolve foreign (dotted) tickers to US tickers via SEC.
 
     Returns (enriched_hits, unmatched_list).
     """
-    # home-market entries: dotted ticker + non-US company
+    sec_entries = [(v["ticker"], v["title"]) for v in sec_data.values()]
+    sec_set = {t.upper() for t, _ in sec_entries}
+    sec_by_title_norm = {}
+    for t, title in sec_entries:
+        sec_by_title_norm.setdefault(norm_title(title), t)
+
+    # inverted index for fuzzy matching
+    from collections import defaultdict
+    idx = defaultdict(list)
+    sec_norm_list = [(t, title, norm_title(title)) for t, title in sec_entries]
+    for i, (_, _, tn) in enumerate(sec_norm_list):
+        for tok in set(tn.split()):
+            idx[tok].append(i)
+
+    def sec_lookup_name(name):
+        n = norm_title(name)
+        if n in sec_by_title_norm:
+            return sec_by_title_norm[n]
+        toks_u = set(n.split())
+        if not toks_u:
+            return None
+        cands = set()
+        for tok in toks_u:
+            cands.update(idx.get(tok, []))
+        best = None
+        bestscore = 0
+        for i in cands:
+            t, title, tn = sec_norm_list[i]
+            toks_s = set(tn.split())
+            if not toks_s:
+                continue
+            inter = len(toks_u & toks_s)
+            score = inter / max(len(toks_u), len(toks_s))
+            if score > bestscore:
+                bestscore = score
+                best = t
+        if best and bestscore >= 0.9:
+            return best
+        return None
+
+    # home-market map from Typesense data itself
     home_map = {}
     for h in hits:
         doc = h["document"]
@@ -37,15 +175,38 @@ def resolve_tickers(hits):
         foreign_ticker = None
         unmatched = False
 
-        if is_foreign_adr:
-            home_t = home_map.get(norm_name(name))
-            if home_t:
-                resolved = home_t
-                aliases.add(home_t)
+        if is_home:
+            base = orig_ticker.split(".")[0].upper()
+            cand = None
+            if base in sec_set:
+                cand = base
+            elif strip_trailing_digits(base) in sec_set:
+                cand = strip_trailing_digits(base)
+            elif orig_ticker in MANUAL_OVERRIDES:
+                cand = MANUAL_OVERRIDES[orig_ticker]
+            else:
+                cand = sec_lookup_name(name)
+            if cand:
+                resolved = cand
+                aliases.add(cand)
             else:
                 resolved = "???"
                 foreign_ticker = orig_ticker
                 unmatched = True
+        elif is_foreign_adr:
+            # already a US-listed foreign stock; optionally verify against SEC
+            sec_t = sec_lookup_name(name)
+            if sec_t and sec_t.upper() != orig_ticker.upper():
+                aliases.add(sec_t)
+
+        # add SEC title as alias for partial-text search
+        sec_title = None
+        for t, title in sec_entries:
+            if t.upper() == (resolved if resolved != "???" else orig_ticker).upper():
+                sec_title = title
+                break
+        if sec_title:
+            aliases.add(sec_title)
 
         records.append({
             "hit": h,
@@ -59,9 +220,7 @@ def resolve_tickers(hits):
             "name": name,
         })
 
-    # dedupe key:
-    #   - matched/home entries: (normalized name, resolved ticker)  -> merges ADR+home dupes
-    #   - unmatched entries: (orig ticker, name) so different foreign stocks are NOT merged
+    # dedupe
     groups = {}
     for rec in records:
         if rec["unmatched"]:
@@ -99,6 +258,11 @@ def resolve_tickers(hits):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="Force re-download SEC snapshot")
+    args = parser.parse_args()
+    force = args.force or os.environ.get("FORCE_REFRESH") == "1"
+
     with open(CONFIG) as f:
         cfg = json.load(f)
     base = cfg["endpoint"]
@@ -137,8 +301,11 @@ def main():
         page += 1
         time.sleep(0.2)
 
-    deduped, unmatched = resolve_tickers(all_hits)
+    sec_data = load_sec(cfg, force=force)
+    deduped, unmatched = resolve_tickers(all_hits, sec_data)
     print(f"resolver: {len(all_hits)} -> {len(deduped)} (removed {len(all_hits)-len(deduped)} dupes), unmatched={len(unmatched)}")
+    resolved_count = sum(1 for h in deduped if h["document"].get("ticker") != "???")
+    print(f"  resolved/unresolved tickers: {resolved_count}/{len(deduped)-resolved_count}")
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

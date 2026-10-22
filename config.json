@@ -7,5 +7,8 @@
   "exchanges": ["NYSE", "NASDAQ", "XASE", "BATS", "ARCX"],
   "shariaCompliance": ["COMPLIANT", "NON_COMPLIANT", "QUESTIONABLE"],
   "perPage": 250,
-  "dataFile": "data/stocks.json"
+  "dataFile": "data/stocks.json",
+  "secUrl": "https://www.sec.gov/files/company_tickers.json",
+  "secUserAgent": "stocks-cert research (contact: mrshishirr@gmail.com)",
+  "secFile": "data/sec_tickers.json"
 }

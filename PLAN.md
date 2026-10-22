@@ -4,7 +4,7 @@
 
 ## Status
 
-- Phases 0-4 substantially complete.
+- Phases 0-4 complete. Phase 5 (Pages) published.
 - Phase 5: Pages deploy workflow added; not yet deployed.
 - Pending: key-refresh step, XLSX export, responsive polish, empty-state refinement, GitHub Pages publish.
 
@@ -50,6 +50,7 @@ stocks-cert/
 - [x] Write `data/stocks.json` (31MB) with metadata (fetched_at, count, source)
 - [x] Add `fetch-data.yml` (cron daily + manual dispatch) committing changes only if diff
 - [ ] Key-refresh step: (pending) if API returns 401/403, scrape key from musaffa page (best-effort) and update config.json; else fail loudly
+- [x] SEC resolver v2 (hybrid base/digit/override/name + manual overrides) — 6217/6231 resolved, 14 unmatched
 
 ### Phase 2 — SPA core
 - [x] Vue 3 app shell, Tailwind styling
@@ -103,3 +104,4 @@ stocks-cert/
 - 2026-10-22: Added post-fetch resolver (fetch_data.py): foreign stocks -> '???' + unmatched list; dedup exact dupes.
 - 2026-10-22: On-demand force-fetch button (left of dark toggle).
 - 2026-10-22: Fixed forceFetch scoping bug.
+- 2026-10-22: SEC resolver v2 implemented (6217/6231 resolved, 14 unmatched). Snapshot data/sec_tickers.json committed.
