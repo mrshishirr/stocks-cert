@@ -6,6 +6,98 @@ CONFIG = os.path.join(ROOT, "config.json")
 OUT = os.path.join(ROOT, "data", "stocks.json")
 
 
+def norm_name(n):
+    return " ".join(str(n or "").lower().split())
+
+
+def resolve_tickers(hits):
+    """Post-fetch hook: resolve ADR/foreign stocks to home-market tickers.
+
+    Returns (enriched_hits, unmatched_list).
+    """
+    # home-market entries: dotted ticker + non-US company
+    home_map = {}
+    for h in hits:
+        doc = h["document"]
+        t = str(doc.get("ticker") or "")
+        if "." in t and doc.get("company_country") != "US":
+            home_map.setdefault(norm_name(doc.get("name")), t)
+
+    records = []
+    for h in hits:
+        doc = dict(h["document"])
+        orig_ticker = str(doc.get("ticker") or "")
+        cc = doc.get("company_country")
+        name = doc.get("name")
+        is_home = ("." in orig_ticker) and (cc != "US")
+        is_foreign_adr = (cc != "US") and ("." not in orig_ticker) and (doc.get("isMainTicker") == 1)
+
+        resolved = orig_ticker
+        aliases = {orig_ticker}
+        foreign_ticker = None
+        unmatched = False
+
+        if is_foreign_adr:
+            home_t = home_map.get(norm_name(name))
+            if home_t:
+                resolved = home_t
+                aliases.add(home_t)
+            else:
+                resolved = "???"
+                foreign_ticker = orig_ticker
+                unmatched = True
+
+        records.append({
+            "hit": h,
+            "doc": doc,
+            "orig_ticker": orig_ticker,
+            "is_home": is_home,
+            "resolved": resolved,
+            "aliases": aliases,
+            "foreign_ticker": foreign_ticker,
+            "unmatched": unmatched,
+            "name": name,
+        })
+
+    # dedupe key:
+    #   - matched/home entries: (normalized name, resolved ticker)  -> merges ADR+home dupes
+    #   - unmatched entries: (orig ticker, name) so different foreign stocks are NOT merged
+    groups = {}
+    for rec in records:
+        if rec["unmatched"]:
+            key = ("__unmatched__", rec["orig_ticker"], norm_name(rec["name"]))
+        else:
+            key = ("matched", norm_name(rec["name"]), rec["resolved"])
+        groups.setdefault(key, []).append(rec)
+
+    deduped = []
+    unmatched_list = []
+    seen_unmatched = set()
+    for key, grp in groups.items():
+        if len(grp) == 1:
+            rec = grp[0]
+        else:
+            home_recs = [r for r in grp if r["is_home"]]
+            rec = home_recs[0] if home_recs else grp[0]
+            for r in grp:
+                rec["aliases"] |= r["aliases"]
+        rec["doc"]["ticker"] = rec["resolved"]
+        rec["doc"]["aliases"] = sorted(rec["aliases"])
+        if rec["foreign_ticker"]:
+            rec["doc"]["foreignTicker"] = rec["foreign_ticker"]
+        new_hit = dict(rec["hit"])
+        new_hit["document"] = rec["doc"]
+        deduped.append(new_hit)
+        if rec["unmatched"]:
+            ut = rec["foreign_ticker"]
+            if ut not in seen_unmatched:
+                seen_unmatched.add(ut)
+                unmatched_list.append({"name": rec["name"], "ticker": ut})
+
+    unmatched_list.sort(key=lambda x: (x["name"] or "").lower())
+    return deduped, unmatched_list
+
+
 def main():
     with open(CONFIG) as f:
         cfg = json.load(f)
@@ -44,12 +136,17 @@ def main():
             break
         page += 1
         time.sleep(0.2)
+
+    deduped, unmatched = resolve_tickers(all_hits)
+    print(f"resolver: {len(all_hits)} -> {len(deduped)} (removed {len(all_hits)-len(deduped)} dupes), unmatched={len(unmatched)}")
+
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         json.dump({"fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                   "source": base, "found": total, "count": len(all_hits),
-                   "hits": all_hits}, f)
-    print(f"Wrote {len(all_hits)} hits to {OUT}")
+                   "source": base, "found": total, "count": len(deduped),
+                   "unmatched": unmatched,
+                   "hits": deduped}, f)
+    print(f"Wrote {len(deduped)} hits to {OUT}")
 
 
 if __name__ == "__main__":

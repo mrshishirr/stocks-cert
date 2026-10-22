@@ -135,11 +135,34 @@
             <div class="modal-bg rounded p-2"><div class="muted text-xs">Debt %</div><div class="font-semibold">{{ fmt(detail.interestBearingDebtRatio) }}</div></div>
             <div class="modal-bg rounded p-2"><div class="muted text-xs">ROE</div><div class="font-semibold">{{ fmt(detail.ROE) }}</div></div>
             <div class="modal-bg rounded p-2"><div class="muted text-xs">P/E (TTM)</div><div class="font-semibold">{{ fmt(detail.peTTM) }}</div></div>
+            <div v-if="detail.foreignTicker" class="modal-bg rounded p-2"><div class="muted text-xs">Foreign Ticker</div><div class="font-semibold">{{ detail.foreignTicker }}</div></div>
+            <div v-if="detail.aliases && detail.aliases.length" class="modal-bg rounded p-2 col-span-2"><div class="muted text-xs">Aliases</div><div class="font-semibold">{{ detail.aliases.join(', ') }}</div></div>
           </div>
           <div class="mt-3 text-xs muted">Data from musaffa Typesense · not investment advice.</div>
         </aside>
       </div>
     </template>
+
+    <section v-if="unmatched.length" class="card rounded shadow p-4 mt-6 bordered">
+      <h2 class="text-lg font-bold mb-2">Unresolved foreign stocks (ticker = ???)</h2>
+      <p class="text-sm muted mb-3">{{ unmatched.length }} foreign stocks could not be resolved to a home-market ticker. Listed for identification/fixing.</p>
+      <div class="max-h-64 overflow-y-auto text-sm">
+        <table class="min-w-full">
+          <thead class="thead sticky top-0">
+            <tr>
+              <th class="p-2 border bordered text-left">Foreign Ticker</th>
+              <th class="p-2 border bordered text-left">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in unmatched" :key="u.ticker" class="hover:bg-blue-50 row">
+              <td class="p-2 border bordered font-mono">{{ u.ticker }}</td>
+              <td class="p-2 border bordered">{{ u.name }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
   <script>
     const { createApp, ref, computed, onMounted, watch } = Vue;
@@ -208,8 +231,10 @@
         const shariaClass = (v) => shariaBadge(v);
         const ratingClass = (v) => ratingBadge(v);
 
+        const unmatched = ref([]);
         const setRows = (data) => {
           rows.value = (data.hits || []).map(h => h.document || h);
+          unmatched.value = data.unmatched || [];
           lastUpdated.value = data.fetched_at || null;
         };
 
@@ -266,7 +291,9 @@
             if (!shariaFilter.value.includes(r.sharia_compliance)) return false;
             if (!exchangeFilter.value.includes(r.exchange)) return false;
             if (q) {
-              const hay = (r.ticker + ' ' + (r.name||'')).toLowerCase();
+              const aliases = (r.aliases || []).join(' ');
+              const ft = r.foreignTicker || '';
+              const hay = (r.ticker + ' ' + (r.name||'') + ' ' + aliases + ' ' + ft).toLowerCase();
               if (!hay.includes(q)) return false;
             }
             return true;
@@ -385,7 +412,8 @@
                  shariaOptions, exchangeOptions, page, pageSize, totalPages, pageRows,
                  filtered, sorted, total, detail, lastUpdated, cacheStatus, dark,
                  sorts, sortIndex, sortDirOf, columns, fmt, shariaClass, ratingClass,
-                 resetFilters, openDetail, exportCsv, toggleDark, sortBy, clearSort };
+                 resetFilters, openDetail, exportCsv, toggleDark, sortBy, clearSort,
+                 unmatched };
       }
     }).mount('#app');
   </script>
