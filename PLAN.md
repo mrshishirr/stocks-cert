@@ -2,6 +2,12 @@
 
 > **Living document.** Update this file as work progresses: tick checkboxes, append to the Changelog, revise decisions. Last updated: 2026-10-22.
 
+## Status
+
+- Phases 0-4 substantially complete.
+- Phase 5: Pages deploy workflow added; not yet deployed.
+- Pending: key-refresh step, XLSX export, responsive polish, empty-state refinement, GitHub Pages publish.
+
 ## Goal
 
 Build a single-page app (SPA) that replicates [musaffa.com/stock-screener](https://musaffa.com/stock-screener/?country=US&page=1) for browsing/filtering/sorting halal-screened stocks, hosted on GitHub Pages. Data sourced from the Musaffa Typesense endpoint (see `config.json`), periodically fetched and stored in-repo (Option A) so the SPA reads a local JSON file instead of hitting the API directly.
@@ -37,7 +43,7 @@ stocks-cert/
 ### Phase 0 — Scaffold
 - [x] Create repo structure (index.html, config.json, scripts, workflows)
 - [x] Add .gitignore, README.md
-- [x] Init git (commit pending user)
+- [x] Init git + commits
 
 ### Phase 1 — Data pipeline (Option A)
 - [x] Port `fetch_data.py` (done, 6592 hits) (paginate per_page=250, all compliance levels, US exchanges)
@@ -63,7 +69,7 @@ stocks-cert/
 
 ### Phase 5 — Deploy & polish
 - [x] GitHub Pages via Actions (workflow added)
-- [ ] Responsive/mobile layout
+- [ ] Responsive/mobile layout (partial - Tailwind responsive classes used)
 - [x] Loading/error states (empty state pending)
 
 ## API key refresh mechanism
