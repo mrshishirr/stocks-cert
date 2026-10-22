@@ -14,9 +14,14 @@
     html.dark .card { background-color: #1f2937 !important; }
     html.dark .thead { background-color: #374151 !important; }
     html.dark .row:hover { background-color: #1e3a8a !important; }
+    html:not(.dark) button:hover { background-color: #e5e7eb !important; }
+    html.dark button:hover { background-color: #374151 !important; }
     html.dark input, html.dark select { background-color: #374151 !important; color: #f3f4f6 !important; border-color: #4b5563 !important; }
     html.dark .bordered { border-color: #374151 !important; }
-    html.dark .muted { color: #9ca3af !important; }
+    html.dark .muted { color: #b0b0b0 !important; }
+    /* focus indicator (AAA) */
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+    html.dark button:focus-visible, html.dark input:focus-visible, html.dark select:focus-visible { outline-color: #60a5fa; }
     html.dark .modal { background-color: #1f2937 !important; }
     html.dark .modal-bg { background-color: #111827 !important; }
   </style>
@@ -32,7 +37,7 @@
           <span v-if="cacheStatus" class="ml-2 text-xs">({{ cacheStatus }})</span>
         </p>
       </div>
-      <button @click="toggleDark" class="px-3 py-1 border bordered rounded text-sm hover:bg-gray-100" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
+      <button @click="toggleDark" class="px-3 py-1 border bordered rounded text-sm" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
         {{ dark ? '☀' : '☾' }}
       </button>
     </header>
@@ -54,14 +59,14 @@
         </div>
       </div>
       <div class="mt-3 flex items-center gap-3 text-sm">
-        <button @click="resetFilters" class="px-3 py-1 border bordered rounded hover:bg-gray-100">Reset</button>
+        <button @click="resetFilters" class="px-3 py-1 border bordered rounded">Reset</button>
         <span class="muted">{{ filtered.length }} matching · page {{ page }} of {{ totalPages }}</span>
-        <button @click="exportCsv" class="ml-auto px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Export CSV</button>
+        <button @click="exportCsv" class="ml-auto px-3 py-1 bg-blue-800 text-white rounded hover:bg-blue-900">Export CSV</button>
       </div>
     </section>
 
     <div v-if="loading && !rows.length" class="muted p-4">Loading data…</div>
-    <div v-if="error" class="text-red-600 p-4">{{ error }}</div>
+    <div v-if="error" class="text-red-800 p-4">{{ error }}</div>
     <template v-if="rows.length">
       <div class="card rounded shadow overflow-x-auto bordered">
         <table class="min-w-full text-sm">
@@ -156,10 +161,10 @@
     // badge colors (Tailwind classes, light-mode only; dark handled by CSS above is minimal,
     // but badges keep their color in both modes)
     const shariaBadge = (v) => ({
-      'COMPLIANT': 'bg-green-100 text-green-800',
-      'QUESTIONABLE': 'bg-yellow-100 text-yellow-800',
-      'NON_COMPLIANT': 'bg-red-100 text-red-800',
-    }[v] || 'bg-gray-100 text-gray-600');
+      'COMPLIANT': 'bg-green-100 text-green-900',
+      'QUESTIONABLE': 'bg-yellow-100 text-yellow-900',
+      'NON_COMPLIANT': 'bg-red-100 text-red-900',
+    }[v] || 'bg-gray-100 text-gray-700');
     const ratingBadge = shariaBadge;
 
     createApp({
@@ -177,7 +182,7 @@
         const detail = ref(null);
         const lastUpdated = ref(null);
         const cacheStatus = ref('');
-        const dark = ref(localStorage.getItem('stocks-cert:dark') === '1');
+        const dark = ref(localStorage.getItem('stocks-cert:dark') !== '0');
         const sortCol = ref('usdMarketCap');
         const sortDir = ref('desc');
 
