@@ -86,3 +86,4 @@ stocks-cert/
 - 2026-10-22: Fixed stray EOF text; added last-updated display, browser cache + once/day background refresh, light/dark mode toggle.
 - 2026-10-22: Fixed dark mode (config before CDN); made all column headers sortable with toggle; default sort market cap desc.
 - 2026-10-22: Dark mode fixed with CSS fallback + sun/moon glyph toggle.
+- 2026-10-22: Dark mode background fix (!important on body).
