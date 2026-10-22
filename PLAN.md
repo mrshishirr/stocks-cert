@@ -102,3 +102,4 @@ stocks-cert/
 - 2026-10-22: Multi-sort fixed (not pinned; new sort primary; fully unsortable).
 - 2026-10-22: Added post-fetch resolver (fetch_data.py): foreign stocks -> '???' + unmatched list; dedup exact dupes.
 - 2026-10-22: On-demand force-fetch button (left of dark toggle).
+- 2026-10-22: Fixed forceFetch scoping bug.
