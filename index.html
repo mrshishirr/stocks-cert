@@ -68,73 +68,74 @@
     <div v-if="loading && !rows.length" class="muted p-4">Loading data…</div>
     <div v-if="error" class="text-red-800 p-4">{{ error }}</div>
     <template v-if="rows.length">
-      <div class="card rounded shadow overflow-x-auto bordered">
-        <table class="min-w-full text-sm">
-          <thead class="thead sticky top-0">
-            <tr>
-              <th v-for="col in columns" :key="col.key" class="p-2 border bordered text-left cursor-pointer select-none" @click="sortBy(col.key)">
-                {{ col.label }}
-                <span v-if="sortCol===col.key">{{ sortDir==='asc' ? '▲' : '▼' }}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in pageRows" :key="r.id||r.ticker" class="hover:bg-blue-50 cursor-pointer row" @click="openDetail(r)">
-              <td class="p-2 border bordered font-mono">{{ r.ticker }}</td>
-              <td class="p-2 border bordered">{{ r.name }}</td>
-              <td class="p-2 border bordered text-center">{{ r.exchange }}</td>
-              <td class="p-2 border bordered text-center">
-                <span class="px-2 py-0.5 rounded text-xs" :class="shariaClass(r.sharia_compliance)">{{ r.sharia_compliance }}</span>
-              </td>
-              <td class="p-2 border bordered text-center">
-                <span class="px-2 py-0.5 rounded text-xs" :class="ratingClass(r.musaffaHalalRating)">{{ r.musaffaHalalRating || '—' }}</span>
-              </td>
-              <td class="p-2 border bordered text-center">{{ fmt(r.musaffa_iri_score) }}</td>
-              <td class="p-2 border bordered text-right">{{ (r.usdMarketCap/1000).toFixed(1) }}</td>
-              <td class="p-2 border bordered text-right">{{ fmt(r.businessCompliantRatio) }}</td>
-              <td class="p-2 border bordered text-right">{{ fmt(r.doubtful_revenue_percent) }}</td>
-              <td class="p-2 border bordered text-right">{{ fmt(r.interestBearingDebtRatio) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div class="flex gap-4 items-start">
+        <div class="flex-1 min-w-0">
+          <div class="card rounded shadow overflow-x-auto bordered">
+            <table class="min-w-full text-sm">
+              <thead class="thead sticky top-0">
+                <tr>
+                  <th v-for="col in columns" :key="col.key" class="p-2 border bordered text-left cursor-pointer select-none" @click="sortBy(col.key)">
+                    {{ col.label }}
+                    <span v-if="sortCol===col.key">{{ sortDir==='asc' ? '▲' : '▼' }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in pageRows" :key="r.id||r.ticker" class="hover:bg-blue-50 cursor-pointer row" @click="openDetail(r)">
+                  <td class="p-2 border bordered font-mono">{{ r.ticker }}</td>
+                  <td class="p-2 border bordered">{{ r.name }}</td>
+                  <td class="p-2 border bordered text-center">{{ r.exchange }}</td>
+                  <td class="p-2 border bordered text-center">
+                    <span class="px-2 py-0.5 rounded text-xs" :class="shariaClass(r.sharia_compliance)">{{ r.sharia_compliance }}</span>
+                  </td>
+                  <td class="p-2 border bordered text-center">
+                    <span class="px-2 py-0.5 rounded text-xs" :class="ratingClass(r.musaffaHalalRating)">{{ r.musaffaHalalRating || '—' }}</span>
+                  </td>
+                  <td class="p-2 border bordered text-center">{{ fmt(r.musaffa_iri_score) }}</td>
+                  <td class="p-2 border bordered text-right">{{ (r.usdMarketCap/1000).toFixed(1) }}</td>
+                  <td class="p-2 border bordered text-right">{{ fmt(r.businessCompliantRatio) }}</td>
+                  <td class="p-2 border bordered text-right">{{ fmt(r.doubtful_revenue_percent) }}</td>
+                  <td class="p-2 border bordered text-right">{{ fmt(r.interestBearingDebtRatio) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-      <div class="flex items-center justify-center gap-2 mt-4">
-        <button @click="page=1" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">«</button>
-        <button @click="page--" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">Prev</button>
-        <span class="text-sm">Page {{ page }} / {{ totalPages }}</span>
-        <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">Next</button>
-        <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">»</button>
+          <div class="flex items-center justify-center gap-2 mt-4">
+            <button @click="page=1" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">«</button>
+            <button @click="page--" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">Prev</button>
+            <span class="text-sm">Page {{ page }} / {{ totalPages }}</span>
+            <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">Next</button>
+            <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">»</button>
+          </div>
+        </div>
+
+        <aside v-if="detail" class="w-full md:w-96 shrink-0 card rounded shadow p-4 bordered sticky top-4 max-h-[85vh] overflow-y-auto">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <h2 class="text-lg font-bold">{{ detail.ticker }} — {{ detail.name }}</h2>
+              <p class="text-xs muted">{{ detail.musaffaSector }} · {{ detail.musaffaIndustry }} · {{ detail.exchange }}</p>
+            </div>
+            <button @click="detail=null" class="text-gray-500 text-xl leading-none" title="Close">×</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Sharia</div><div class="font-semibold">{{ detail.sharia_compliance }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Halal Rating</div><div class="font-semibold">{{ detail.musaffaHalalRating || '—' }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">IRI Score</div><div class="font-semibold">{{ fmt(detail.musaffa_iri_score) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Market Cap $B</div><div class="font-semibold">{{ (detail.usdMarketCap/1000).toFixed(1) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Biz Compliant %</div><div class="font-semibold">{{ fmt(detail.businessCompliantRatio) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Non-Compliant %</div><div class="font-semibold">{{ fmt(detail.businessNonCompliantRatio) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Questionable %</div><div class="font-semibold">{{ fmt(detail.businessQuestionableRatio) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Doubtful %</div><div class="font-semibold">{{ fmt(detail.doubtful_revenue_percent) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Halal Revenue %</div><div class="font-semibold">{{ fmt(detail.halal_revenue_percent) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">Debt %</div><div class="font-semibold">{{ fmt(detail.interestBearingDebtRatio) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">ROE</div><div class="font-semibold">{{ fmt(detail.ROE) }}</div></div>
+            <div class="modal-bg rounded p-2"><div class="muted text-xs">P/E (TTM)</div><div class="font-semibold">{{ fmt(detail.peTTM) }}</div></div>
+          </div>
+          <div class="mt-3 text-xs muted">Data from musaffa Typesense · not investment advice.</div>
+        </aside>
       </div>
     </template>
-
-    <div v-if="detail" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" @click.self="detail=null">
-      <div class="modal rounded shadow-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto p-5">
-        <div class="flex items-start justify-between mb-3">
-          <div>
-            <h2 class="text-xl font-bold">{{ detail.ticker }} — {{ detail.name }}</h2>
-            <p class="text-sm muted">{{ detail.musaffaSector }} · {{ detail.musaffaIndustry }} · {{ detail.exchange }}</p>
-          </div>
-          <button @click="detail=null" class="text-gray-500 text-2xl leading-none">×</button>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          <div class="modal-bg rounded p-2"><div class="muted">Sharia</div><div class="font-semibold">{{ detail.sharia_compliance }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Halal Rating</div><div class="font-semibold">{{ detail.musaffaHalalRating || '—' }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">IRI Score</div><div class="font-semibold">{{ fmt(detail.musaffa_iri_score) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Market Cap $B</div><div class="font-semibold">{{ (detail.usdMarketCap/1000).toFixed(1) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Biz Compliant %</div><div class="font-semibold">{{ fmt(detail.businessCompliantRatio) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Non-Compliant %</div><div class="font-semibold">{{ fmt(detail.businessNonCompliantRatio) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Questionable %</div><div class="font-semibold">{{ fmt(detail.businessQuestionableRatio) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Doubtful %</div><div class="font-semibold">{{ fmt(detail.doubtful_revenue_percent) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Halal Revenue %</div><div class="font-semibold">{{ fmt(detail.halal_revenue_percent) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">Debt %</div><div class="font-semibold">{{ fmt(detail.interestBearingDebtRatio) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">ROE</div><div class="font-semibold">{{ fmt(detail.ROE) }}</div></div>
-          <div class="modal-bg rounded p-2"><div class="muted">P/E (TTM)</div><div class="font-semibold">{{ fmt(detail.peTTM) }}</div></div>
-        </div>
-        <div class="mt-4 text-xs muted">Data from musaffa Typesense · not investment advice.</div>
-      </div>
-    </div>
-  </div>
 
   <script>
     const { createApp, ref, computed, onMounted, watch } = Vue;
@@ -323,7 +324,13 @@
           sortDir.value = 'desc';
           page.value = 1;
         };
-        const openDetail = (r) => { detail.value = r; };
+        const openDetail = (r) => {
+          if (detail.value && (detail.value.id || detail.value.ticker) === (r.id || r.ticker)) {
+            detail.value = null;
+          } else {
+            detail.value = r;
+          }
+        };
         const exportCsv = () => {
           const cols = ['ticker','name','exchange','sharia_compliance','musaffaHalalRating','musaffa_iri_score','usdMarketCap','businessCompliantRatio','doubtful_revenue_percent','interestBearingDebtRatio'];
           const lines = [cols.join(',')];
