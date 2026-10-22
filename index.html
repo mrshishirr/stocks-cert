@@ -4,131 +4,129 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stocks Cert — Halal Stock Screener</title>
-  <script>
-    tailwind.config = { darkMode: 'class' };
-  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
-    html.dark, html.dark body { background-color: #111827 !important; color: #f3f4f6 !important; }
-    html.dark .bg-white { background-color: #1f2937 !important; }
-    html.dark .bg-gray-50 { background-color: #111827 !important; }
-    html.dark .bg-gray-100 { background-color: #374151 !important; }
-    html.dark .text-gray-900 { color: #f3f4f6 !important; }
-    html.dark .text-gray-600, html.dark .text-gray-500, html.dark .text-gray-400 { color: #9ca3af !important; }
-    html.dark .border { border-color: #374151 !important; }
+    /* Light (default) */
+    body { background-color: #f9fafb; color: #111827; }
+    /* Dark mode via .dark class on <html> */
+    html.dark body { background-color: #111827 !important; color: #f3f4f6 !important; }
+    html.dark .card { background-color: #1f2937 !important; }
+    html.dark .thead { background-color: #374151 !important; }
+    html.dark .row:hover { background-color: #1e3a8a !important; }
     html.dark input, html.dark select { background-color: #374151 !important; color: #f3f4f6 !important; border-color: #4b5563 !important; }
-    html.dark .hover\\:bg-blue-50:hover { background-color: #1e3a8a !important; }
-    html.dark .hover\\:bg-gray-100:hover { background-color: #374151 !important; }
+    html.dark .bordered { border-color: #374151 !important; }
+    html.dark .muted { color: #9ca3af !important; }
+    html.dark .modal { background-color: #1f2937 !important; }
+    html.dark .modal-bg { background-color: #111827 !important; }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+<body class="bg-gray-50 text-gray-900">
   <div id="app" class="max-w-7xl mx-auto p-4">
     <header class="mb-4 flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">Halal Stock Screener (stocks-cert)</h1>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-sm muted">
           US stocks · {{ total }} loaded
           <span v-if="lastUpdated"> · data updated {{ lastUpdated }}</span>
           <span v-if="cacheStatus" class="ml-2 text-xs">({{ cacheStatus }})</span>
         </p>
       </div>
-      <button @click="toggleDark" class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:border-gray-600" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
+      <button @click="toggleDark" class="px-3 py-1 border bordered rounded text-sm hover:bg-gray-100" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
         {{ dark ? '☀' : '☾' }}
       </button>
     </header>
 
-    <section class="bg-white dark:bg-gray-800 rounded shadow p-4 mb-4">
+    <section class="card rounded shadow p-4 mb-4 bordered">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input v-model="search" placeholder="Search ticker or name…" class="border rounded px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600" />
+        <input v-model="search" placeholder="Search ticker or name…" class="border bordered rounded px-3 py-2 text-sm bg-white" />
         <div class="flex flex-wrap gap-2 items-center text-sm">
-          <span class="text-gray-500 dark:text-gray-400">Sharia:</span>
+          <span class="muted">Sharia:</span>
           <label v-for="s in shariaOptions" :key="s" class="flex items-center gap-1">
             <input type="checkbox" :value="s" v-model="shariaFilter" /> {{ s }}
           </label>
         </div>
         <div class="flex flex-wrap gap-2 items-center text-sm">
-          <span class="text-gray-500 dark:text-gray-400">Exch:</span>
+          <span class="muted">Exch:</span>
           <label v-for="e in exchangeOptions" :key="e" class="flex items-center gap-1">
             <input type="checkbox" :value="e" v-model="exchangeFilter" /> {{ e }}
           </label>
         </div>
       </div>
       <div class="mt-3 flex items-center gap-3 text-sm">
-        <button @click="resetFilters" class="px-3 py-1 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">Reset</button>
-        <span class="text-gray-500 dark:text-gray-400">{{ filtered.length }} matching · page {{ page }} of {{ totalPages }}</span>
+        <button @click="resetFilters" class="px-3 py-1 border bordered rounded hover:bg-gray-100">Reset</button>
+        <span class="muted">{{ filtered.length }} matching · page {{ page }} of {{ totalPages }}</span>
         <button @click="exportCsv" class="ml-auto px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Export CSV</button>
       </div>
     </section>
 
-    <div v-if="loading && !rows.length" class="text-gray-500 p-4">Loading data…</div>
+    <div v-if="loading && !rows.length" class="muted p-4">Loading data…</div>
     <div v-if="error" class="text-red-600 p-4">{{ error }}</div>
     <template v-if="rows.length">
-      <div class="bg-white dark:bg-gray-800 rounded shadow overflow-x-auto">
+      <div class="card rounded shadow overflow-x-auto bordered">
         <table class="min-w-full text-sm">
-          <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+          <thead class="thead sticky top-0">
             <tr>
-              <th v-for="col in columns" :key="col.key" class="p-2 border text-left cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
-                  @click="sortBy(col.key)">
+              <th v-for="col in columns" :key="col.key" class="p-2 border bordered text-left cursor-pointer select-none" @click="sortBy(col.key)">
                 {{ col.label }}
                 <span v-if="sortCol===col.key">{{ sortDir==='asc' ? '▲' : '▼' }}</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in pageRows" :key="r.id||r.ticker" class="hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer" @click="openDetail(r)">
-              <td class="p-2 border font-mono">{{ r.ticker }}</td>
-              <td class="p-2 border">{{ r.name }}</td>
-              <td class="p-2 border text-center">{{ r.exchange }}</td>
-              <td class="p-2 border text-center">
+            <tr v-for="r in pageRows" :key="r.id||r.ticker" class="hover:bg-blue-50 cursor-pointer row" @click="openDetail(r)">
+              <td class="p-2 border bordered font-mono">{{ r.ticker }}</td>
+              <td class="p-2 border bordered">{{ r.name }}</td>
+              <td class="p-2 border bordered text-center">{{ r.exchange }}</td>
+              <td class="p-2 border bordered text-center">
                 <span class="px-2 py-0.5 rounded text-xs" :class="shariaClass(r.sharia_compliance)">{{ r.sharia_compliance }}</span>
               </td>
-              <td class="p-2 border text-center">
+              <td class="p-2 border bordered text-center">
                 <span class="px-2 py-0.5 rounded text-xs" :class="ratingClass(r.musaffaHalalRating)">{{ r.musaffaHalalRating || '—' }}</span>
               </td>
-              <td class="p-2 border text-center">{{ fmt(r.musaffa_iri_score) }}</td>
-              <td class="p-2 border text-right">{{ (r.usdMarketCap/1000).toFixed(1) }}</td>
-              <td class="p-2 border text-right">{{ fmt(r.businessCompliantRatio) }}</td>
-              <td class="p-2 border text-right">{{ fmt(r.doubtful_revenue_percent) }}</td>
-              <td class="p-2 border text-right">{{ fmt(r.interestBearingDebtRatio) }}</td>
+              <td class="p-2 border bordered text-center">{{ fmt(r.musaffa_iri_score) }}</td>
+              <td class="p-2 border bordered text-right">{{ (r.usdMarketCap/1000).toFixed(1) }}</td>
+              <td class="p-2 border bordered text-right">{{ fmt(r.businessCompliantRatio) }}</td>
+              <td class="p-2 border bordered text-right">{{ fmt(r.doubtful_revenue_percent) }}</td>
+              <td class="p-2 border bordered text-right">{{ fmt(r.interestBearingDebtRatio) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="flex items-center justify-center gap-2 mt-4">
-        <button @click="page=1" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">«</button>
-        <button @click="page--" :disabled="page===1" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">Prev</button>
+        <button @click="page=1" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">«</button>
+        <button @click="page--" :disabled="page===1" class="px-2 py-1 border bordered rounded disabled:opacity-40">Prev</button>
         <span class="text-sm">Page {{ page }} / {{ totalPages }}</span>
-        <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">Next</button>
-        <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border rounded disabled:opacity-40 dark:border-gray-600">»</button>
+        <button @click="page++" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">Next</button>
+        <button @click="page=totalPages" :disabled="page===totalPages" class="px-2 py-1 border bordered rounded disabled:opacity-40">»</button>
       </div>
     </template>
 
     <div v-if="detail" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" @click.self="detail=null">
-      <div class="bg-white dark:bg-gray-800 rounded shadow-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto p-5">
+      <div class="modal rounded shadow-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto p-5">
         <div class="flex items-start justify-between mb-3">
           <div>
             <h2 class="text-xl font-bold">{{ detail.ticker }} — {{ detail.name }}</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ detail.musaffaSector }} · {{ detail.musaffaIndustry }} · {{ detail.exchange }}</p>
+            <p class="text-sm muted">{{ detail.musaffaSector }} · {{ detail.musaffaIndustry }} · {{ detail.exchange }}</p>
           </div>
-          <button @click="detail=null" class="text-gray-500 hover:text-black dark:hover:text-white text-2xl leading-none">×</button>
+          <button @click="detail=null" class="text-gray-500 text-2xl leading-none">×</button>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Sharia</div><div class="font-semibold">{{ detail.sharia_compliance }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Halal Rating</div><div class="font-semibold">{{ detail.musaffaHalalRating || '—' }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">IRI Score</div><div class="font-semibold">{{ fmt(detail.musaffa_iri_score) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Market Cap $B</div><div class="font-semibold">{{ (detail.usdMarketCap/1000).toFixed(1) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Biz Compliant %</div><div class="font-semibold">{{ fmt(detail.businessCompliantRatio) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Non-Compliant %</div><div class="font-semibold">{{ fmt(detail.businessNonCompliantRatio) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Questionable %</div><div class="font-semibold">{{ fmt(detail.businessQuestionableRatio) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Doubtful %</div><div class="font-semibold">{{ fmt(detail.doubtful_revenue_percent) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Halal Revenue %</div><div class="font-semibold">{{ fmt(detail.halal_revenue_percent) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">Debt %</div><div class="font-semibold">{{ fmt(detail.interestBearingDebtRatio) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">ROE</div><div class="font-semibold">{{ fmt(detail.ROE) }}</div></div>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded p-2"><div class="text-gray-500">P/E (TTM)</div><div class="font-semibold">{{ fmt(detail.peTTM) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Sharia</div><div class="font-semibold">{{ detail.sharia_compliance }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Halal Rating</div><div class="font-semibold">{{ detail.musaffaHalalRating || '—' }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">IRI Score</div><div class="font-semibold">{{ fmt(detail.musaffa_iri_score) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Market Cap $B</div><div class="font-semibold">{{ (detail.usdMarketCap/1000).toFixed(1) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Biz Compliant %</div><div class="font-semibold">{{ fmt(detail.businessCompliantRatio) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Non-Compliant %</div><div class="font-semibold">{{ fmt(detail.businessNonCompliantRatio) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Questionable %</div><div class="font-semibold">{{ fmt(detail.businessQuestionableRatio) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Doubtful %</div><div class="font-semibold">{{ fmt(detail.doubtful_revenue_percent) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Halal Revenue %</div><div class="font-semibold">{{ fmt(detail.halal_revenue_percent) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">Debt %</div><div class="font-semibold">{{ fmt(detail.interestBearingDebtRatio) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">ROE</div><div class="font-semibold">{{ fmt(detail.ROE) }}</div></div>
+          <div class="modal-bg rounded p-2"><div class="muted">P/E (TTM)</div><div class="font-semibold">{{ fmt(detail.peTTM) }}</div></div>
         </div>
-        <div class="mt-4 text-xs text-gray-400">Data from musaffa Typesense · not investment advice.</div>
+        <div class="mt-4 text-xs muted">Data from musaffa Typesense · not investment advice.</div>
       </div>
     </div>
   </div>
@@ -136,7 +134,6 @@
   <script>
     const { createApp, ref, computed, onMounted, watch } = Vue;
     const RATING_ORDER = { COMPLIANT: 0, QUESTIONABLE: 1, NON_COMPLIANT: 2 };
-    const CACHE_KEY = 'stocks-cert:data';
     const DATE_KEY = 'stocks-cert:fetchDate';
     const COLUMNS = [
       { key: 'ticker', label: 'Ticker' },
@@ -155,6 +152,15 @@
       if (key === 'usdMarketCap') return (r.usdMarketCap || 0) / 1000;
       return r[key];
     };
+
+    // badge colors (Tailwind classes, light-mode only; dark handled by CSS above is minimal,
+    // but badges keep their color in both modes)
+    const shariaBadge = (v) => ({
+      'COMPLIANT': 'bg-green-100 text-green-800',
+      'QUESTIONABLE': 'bg-yellow-100 text-yellow-800',
+      'NON_COMPLIANT': 'bg-red-100 text-red-800',
+    }[v] || 'bg-gray-100 text-gray-600');
+    const ratingBadge = shariaBadge;
 
     createApp({
       setup() {
@@ -177,7 +183,11 @@
 
         const columns = COLUMNS;
 
-        const applyDark = () => { document.documentElement.classList.toggle('dark', dark.value); };
+        const applyDark = () => {
+          document.documentElement.classList.toggle('dark', dark.value);
+          document.body.style.backgroundColor = dark.value ? '#111827' : '#f9fafb';
+          document.body.style.color = dark.value ? '#f3f4f6' : '#111827';
+        };
         applyDark();
         const toggleDark = () => {
           dark.value = !dark.value;
@@ -186,18 +196,8 @@
         };
 
         const fmt = (v) => (v == null ? '—' : (typeof v === 'number' ? v.toFixed(2) : v));
-        const shariaClass = (v) => ({
-          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': v === 'COMPLIANT',
-          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': v === 'QUESTIONABLE',
-          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200': v === 'NON_COMPLIANT',
-          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': !v,
-        });
-        const ratingClass = (v) => ({
-          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': v === 'COMPLIANT',
-          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': v === 'QUESTIONABLE',
-          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200': v === 'NON_COMPLIANT',
-          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': !v,
-        });
+        const shariaClass = (v) => shariaBadge(v);
+        const ratingClass = (v) => ratingBadge(v);
 
         const setRows = (data) => {
           rows.value = (data.hits || []).map(h => h.document || h);
@@ -265,7 +265,6 @@
         });
 
         const cmp = (a, b) => {
-          // numeric compare with null handling
           const an = a == null, bn = b == null;
           if (an && bn) return 0;
           if (an) return 1;
@@ -281,7 +280,6 @@
           arr.sort((a, b) => {
             const va = getVal(a, key);
             const vb = getVal(b, key);
-            // special halal rating order
             if (key === 'musaffaHalalRating') {
               const ra = RATING_ORDER[va] ?? 3;
               const rb = RATING_ORDER[vb] ?? 3;
@@ -297,7 +295,6 @@
             sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
           } else {
             sortCol.value = key;
-            // default direction: desc for numeric, asc for text
             const numeric = ['musaffa_iri_score','usdMarketCap','businessCompliantRatio','doubtful_revenue_percent','interestBearingDebtRatio'].includes(key);
             sortDir.value = numeric ? 'desc' : 'asc';
           }
