@@ -281,6 +281,7 @@
             if (!rows.value.length) error.value = e.message;
             cacheStatus.value = rows.value.length ? 'fetch failed (cached)' : 'fetch failed';
           }
+        };
 
         const forceFetch = async () => {
           fetching.value = true;
@@ -303,7 +304,6 @@
           } finally {
             fetching.value = false;
           }
-        };
         };
 
         onMounted(async () => {
