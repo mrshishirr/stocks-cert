@@ -31,57 +31,27 @@ def norm_title(s):
         s = re.sub(r"\b" + w + r"\b", " ", s)
     return " ".join(s.split())
 
+def load_overrides():
+    """Load manual ticker overrides from data/manual_overrides.json (if present)."""
+    path = os.path.join(ROOT, "data", "manual_overrides.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
 
-# Manual overrides: dotted foreign ticker -> US ticker (verified against SEC)
-MANUAL_OVERRIDES = {
-    "BATS.L": "BTI",
-    "DBK.DE": "DB",
-    "NOKIA.HE": "NOK",
-    "STMPA.PA": "STM",
-    "STLAM.MI": "STLA",
-    "TEF.MC": "TEF",
-    "VIVT3.SA": "VIV",
-    "VALE3.SA": "VALE",
-    "ITUB4.SA": "ITUB",
-    "ABEV3.SA": "ABEV",
-    "SANB3.SA": "BSBR",
-    "CSAN3.SA": "CSANY",
-    "CSNA3.SA": "SID",
-    "UGPA3.SA": "UGP",
-    "SUZB3.SA": "SUZ",
-    "TIMS3.SA": "TIMB",
-    "ECOPETROL.BC": "EC",
-    "ELD.TO": "EGO",
-    "TCELL.E.IS": "TKC",
-    "DRREDDY.NS": "RDY",
-    "DBV.PA": "DBVT",
-    "GRUPOAVAL.BC": "AVAL",
-    "ERIC B.ST": "ERIC",
-    "ENELCHILE.SN": "ENIC",
-    "BCOLOMBIA.BC": "CIB",
-    "TLEVISACPO.MX": "TV",
-    "TLKM.JK": "TLK",
-    "VISTAA.MX": "VIST",
-    "VOLARA.MX": "VLRS",
-    "GGBR4.SA": "GGB",
-    "YPFD2.BA": "YPF",
-    "BBU.UN.TO": "BBU",
-    "CPLE6.SA": "ELP",
-    "ALCLS.PA": "CLLS",
-    "ASURB.MX": "ASR",
-    "AXIA6.SA": "AXIA",
-    "FEMSAUBD.MX": "FMX",
-    "GAPB.MX": "PAC",
-    "PHARM.AS": "PHAR",
-    "QIPT.TO": "QIPT",
-    "SIMECB.MX": "SIMEC",
-    "SQM-A.SN": "SQM",
-    "TGSU22.BA": "TGS",
-    "VESTA.MX": "VTMX",
-    "AXIA6.SA": "AXICY",
-    "NOKIA.HE": "NOK",
-    "BATS.L": "BTI",
-}
+
+def load_override_aliases():
+    path = os.path.join(ROOT, "data", "manual_override_aliases.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
+
+
+MANUAL_OVERRIDES = load_overrides()
+OVERRIDE_ALIASES = load_override_aliases()
+
+
 
 
 def strip_trailing_digits(s):
@@ -189,6 +159,8 @@ def resolve_tickers(hits, sec_data):
             if cand:
                 resolved = cand
                 aliases.add(cand)
+                for a in OVERRIDE_ALIASES.get(orig_ticker, []):
+                    aliases.add(a)
             else:
                 resolved = "???"
                 foreign_ticker = orig_ticker
