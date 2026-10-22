@@ -99,3 +99,4 @@ stocks-cert/
 - 2026-10-22: On fetch failure keep cached data and report 'fetch failed'.
 - 2026-10-22: Row click opens right side panel (toggle/close); table remains navigable.
 - 2026-10-22: Multi-sort columns with priority order and clear-sort.
+- 2026-10-22: Multi-sort fixed (not pinned; new sort primary; fully unsortable).
