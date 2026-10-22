@@ -293,7 +293,7 @@
 
         const sorted = computed(() => {
           const arr = [...filtered.value];
-          const active = sorts.value.length ? sorts.value : [{ key: 'usdMarketCap', dir: 'desc' }];
+          const active = sorts.value;
           arr.sort((a, b) => {
             for (const s of active) {
               const key = s.key;
@@ -319,18 +319,17 @@
           const idx = sorts.value.findIndex(s => s.key === key);
           if (idx === -1) {
             const numeric = ['musaffa_iri_score','usdMarketCap','businessCompliantRatio','doubtful_revenue_percent','interestBearingDebtRatio'].includes(key);
-            sorts.value = [...sorts.value, { key, dir: numeric ? 'desc' : 'asc' }];
+            // new sort becomes PRIMARY (prepend) so it visibly reorders
+            sorts.value = [{ key, dir: numeric ? 'desc' : 'asc' }, ...sorts.value];
           } else {
             const cur = sorts.value[idx];
             if (cur.dir === 'asc') {
-              // asc -> desc
               const next = [...sorts.value];
               next[idx] = { key, dir: 'desc' };
               sorts.value = next;
             } else {
-              // desc -> remove
+              // desc -> remove; allow empty (no pinned sort)
               sorts.value = sorts.value.filter(s => s.key !== key);
-              if (sorts.value.length === 0) sorts.value = [{ key: 'usdMarketCap', dir: 'desc' }];
             }
           }
           page.value = 1;
