@@ -98,3 +98,4 @@ stocks-cert/
 - 2026-10-22: Default dark mode; AAA contrast audit (badges/muted/btn/hover/focus) passed.
 - 2026-10-22: On fetch failure keep cached data and report 'fetch failed'.
 - 2026-10-22: Row click opens right side panel (toggle/close); table remains navigable.
+- 2026-10-22: Multi-sort columns with priority order and clear-sort.
