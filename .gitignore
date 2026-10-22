@@ -1,0 +1,5 @@
+# data is committed (Option A), but keep local scratch out
+.DS_Store
+*.pyc
+__pycache__/
+.env

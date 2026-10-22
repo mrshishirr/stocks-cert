@@ -1,0 +1,11 @@
+{
+  "endpoint": "https://0bs2hegi5nmtad4op.a1.typesense.net/collections/stocks_data/documents/search",
+  "apiKey": "GRhZdTOnzVKId4Ln9G1PIvuIgn1TK0fH",
+  "origin": "https://musaffa.com",
+  "referer": "https://musaffa.com/",
+  "countries": ["US", "IN", "GB", "AE", "CA", "DE", "SA", "EG", "TR"],
+  "exchanges": ["NYSE", "NASDAQ", "XASE", "BATS", "ARCX"],
+  "shariaCompliance": ["COMPLIANT", "NON_COMPLIANT", "QUESTIONABLE"],
+  "perPage": 250,
+  "dataFile": "data/stocks.json"
+}
