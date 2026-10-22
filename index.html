@@ -37,6 +37,9 @@
           <span v-if="cacheStatus" class="ml-2 text-xs">({{ cacheStatus }})</span>
         </p>
       </div>
+      <button @click="forceFetch" :disabled="fetching" class="px-3 py-1 border bordered rounded text-sm disabled:opacity-50" :title="'Force fetch latest data'">
+        {{ fetching ? '…' : '↻' }}
+      </button>
       <button @click="toggleDark" class="px-3 py-1 border bordered rounded text-sm" :title="dark ? 'Switch to light mode' : 'Switch to dark mode'">
         {{ dark ? '☀' : '☾' }}
       </button>
@@ -211,6 +214,7 @@
         const lastUpdated = ref(null);
         const cacheStatus = ref('');
         const dark = ref(localStorage.getItem('stocks-cert:dark') !== '0');
+        const fetching = ref(false);
         const sorts = ref([{ key: 'usdMarketCap', dir: 'desc' }]);
 
         const columns = COLUMNS;
@@ -277,6 +281,29 @@
             if (!rows.value.length) error.value = e.message;
             cacheStatus.value = rows.value.length ? 'fetch failed (cached)' : 'fetch failed';
           }
+
+        const forceFetch = async () => {
+          fetching.value = true;
+          cacheStatus.value = 'fetching…';
+          try {
+            const res = await fetch('data/stocks.json', { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const clone = res.clone();
+            const data = await res.json();
+            setRows(data);
+            cacheStatus.value = 'updated';
+            localStorage.setItem(DATE_KEY, today());
+            if ('caches' in window) {
+              const cache = await caches.open('stocks-cert');
+              await cache.put('data/stocks.json', clone);
+            }
+          } catch (e) {
+            if (!rows.value.length) error.value = e.message;
+            cacheStatus.value = rows.value.length ? 'fetch failed (cached)' : 'fetch failed';
+          } finally {
+            fetching.value = false;
+          }
+        };
         };
 
         onMounted(async () => {
@@ -411,9 +438,9 @@
         return { rows, loading, error, search, shariaFilter, exchangeFilter,
                  shariaOptions, exchangeOptions, page, pageSize, totalPages, pageRows,
                  filtered, sorted, total, detail, lastUpdated, cacheStatus, dark,
-                 sorts, sortIndex, sortDirOf, columns, fmt, shariaClass, ratingClass,
+                 fetching, sorts, sortIndex, sortDirOf, columns, fmt, shariaClass, ratingClass,
                  resetFilters, openDetail, exportCsv, toggleDark, sortBy, clearSort,
-                 unmatched };
+                 forceFetch, unmatched };
       }
     }).mount('#app');
   </script>
